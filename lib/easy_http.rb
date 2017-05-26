@@ -12,7 +12,7 @@ class EASY_HTTP
 #  attr_accessor :url
 
  def self.get(url, options = {})
-   puts 'hello'
+    puts 'hello'
     self.request_type Net::HTTP::Get, url, options
  end
 

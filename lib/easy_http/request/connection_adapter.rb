@@ -10,39 +10,37 @@ module Send_request
 
     def self.connect http_method, url, options, limit = 10
         raise ArgumentError, 'too many HTTP redirects' if limit == 0
+        @url =  self.normalize_url url
+        uri = URI.parse @url
+        if uri.hostname.nil?
+           raise URI::InvalidURIError.new("bad URI(no host provided): #{url}")
+        end
 
-        puts url
-        uri = URI.parse url
         request = http_method.new uri
-        # uri = URI(url)
-        # params = options if !options.blank?
-        # uri.query = URI.encode_www_form(params)
-         puts uri
-        # res = Net::HTTP.get_response(uri)
-        # puts res.body if res.is_a?(Net::HTTPSuccess)
-
-
-        #
-        # req_options = {
-        #      use_ssl: uri.scheme == "https",
-        # }
-        #
-
-
         response = Net::HTTP.start(uri.hostname, uri.port) do |http|
           http.request(request)
         end
 
         case response
-        when Net::HTTPSuccess, Net::HTTPRedirection
-          response.body
-          # OK
+        when Net::HTTPSuccess then self.response_parser response.body
+        when Net::HTTPRedirection then self.connect http_method,response['location'],nil, limit - 1
+        when Net::HTTPServerException then  {'status': '405', 'message': 'Method Not Allowed'}
         else
-          response.value
+          response.error!
         end
+    end
 
+    def self.normalize_url url
+      url = 'http://' + url unless url.match(%r{\A[a-z][a-z0-9+.-]*://}i)
+      url
+    end
+
+    def self.response_parser response
+       response = JSON.parse(response) rescue nil
     end
 
  end
+
+
 
 end
